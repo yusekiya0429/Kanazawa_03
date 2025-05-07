@@ -52,12 +52,11 @@ for (p in need_packages) {
 ```{r}
 rawdataPath2023 <- "./rawdata/宿泊旅行統計調査_2023_確定値_001750679.xlsx"
 rawdataPath2024 <- "./rawdata/宿泊旅行統計調査_2024_第2次速報値_001867118.xlsx"
+sheetlist2023 <- excel_sheets(rawdataPath2023)
 sheetlist_第1表 <- sheetlist2023[stri_detect_regex(sheetlist2023, "^第1表")]
 sheetlist_第8表 <- sheetlist2023[stri_detect_regex(sheetlist2023, "^第8表")]
 colname_base <- c("小規模_総数", "小規模_観光", "小規模_非観光", "小中規模_総数", "小中規模_観光", "小中規模_非観光", "中規模_総数", "中規模_観光", "中規模_非観光", "大規模_総数", "大規模_観光", "大規模_非観光", "旅館", "リゾートホテル", "ビジネスホテル", "シティホテル", "簡易宿所", "会社・団体の宿泊所")
 
-filepath <- rawdataPath2023
-X <- sheetlist_第1表[1]
 ```
 
 ### 第1表    
@@ -109,8 +108,7 @@ func_OperatingRatio <- function(X){
         select(one_of(c("Year", "Month", colname_OperatingRatio)))
     return(rawdat)
 }
-    
-X <- 
+
 ```
 
 - 読み取り  
