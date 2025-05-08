@@ -63,7 +63,7 @@ colname_base <- c("小規模_総数", "小規模_観光", "小規模_非観光",
 - 読み取り用関数     
 ```{r}
 # 第1表（施設数）
-colname_HotelCount <- c("CD所在地", "客室_総数", "客室_観光", "客室_非観光", colname_base)
+colname_HotelCount <- c("CD所在地", "施設数.全体_総数", "施設数.全体_観光", "施設数.全体_非観光", paste0("施設数.", colname_base))
 func_HotelCountData <- function(X){
     rawdat <- read_excel(path = filepath,
                          sheet = X,
@@ -83,16 +83,19 @@ func_HotelCountData <- function(X){
 - 読み取り  
 ```{r}
 filepath <- rawdataPath2023
-HotelCountData_2023 <- purrr::map_dfr(sheetlist_第1表, func_HotelCountData)
+HotelCountData_2023 <- purrr::map_dfr(sheetlist_第1表, func_HotelCountData) %>%
+    mutate(across(4:24, ~as.numeric(formatC(.x, format = "fg"))),
+           CD所在地 = stri_sub_replace(CD所在地, stri_locate_first_regex(CD所在地, '[0-9]+'), omit_na=TRUE, replacement= "")) 
 filepath <- rawdataPath2024
-HotelCountData_2024 <- purrr::map_dfr(sheetlist_第1表, func_HotelCountData)
+HotelCountData_2024 <- purrr::map_dfr(sheetlist_第1表, func_HotelCountData) %>%
+    mutate(across(4:24, ~as.numeric(formatC(.x, format = "fg"))))
 
 ```
 
 ### 第8表   
 - 読み取り用関数     
 ```{r}
-colname_OperatingRatio <- c("CD所在地", "稼働率_総数", "稼働率_観光", "稼働率_非観光", colname_base)
+colname_OperatingRatio <- c("CD所在地", "稼働率.全体_総数", "稼働率.全体_観光", "稼働率.全体_非観光", paste0("稼働率.", colname_base))
 # 第8表（稼働率）
 func_OperatingRatio <- function(X){
     rawdat <- read_excel(path = filepath,
@@ -114,21 +117,92 @@ func_OperatingRatio <- function(X){
 - 読み取り  
 ```{r}
 filepath <- rawdataPath2023
-OperatingRatio_2023 <- purrr::map_dfr(sheetlist_第8表, func_OperatingRatio)
+OperatingRatio_2023 <- purrr::map_dfr(sheetlist_第8表, func_OperatingRatio) %>%
+    mutate(across(4:24, ~as.numeric(formatC(.x, format = "fg"))),
+           CD所在地 = stri_sub_replace(CD所在地, stri_locate_first_regex(CD所在地, '[0-9]+'), omit_na=TRUE, replacement= ""))
 filepath <- rawdataPath2024
-OperatingRatio_2024 <- purrr::map_dfr(sheetlist_第8表, func_OperatingRatio)
+OperatingRatio_2024 <- purrr::map_dfr(sheetlist_第8表, func_OperatingRatio) %>%
+    mutate(across(4:24, ~as.numeric(formatC(.x, format = "fg"))))
 ```
 
 ## データ加工    
+- 全部つなげて縦持ちに変換する    
 ```{r}
+HotelCountData <- bind_rows(HotelCountData_2023, HotelCountData_2024) %>%
+    pivot_longer(cols = starts_with("施設数"),
+                 names_to = "cat",
+                 values_to = "val") %>%
+    separate(col = "cat",
+             into = c("category", "colnames"),
+             sep = "\\.") %>%
+    pivot_wider(names_from = "colnames",
+                values_from = "val")
+
+OperatingRatio <- bind_rows(OperatingRatio_2023, OperatingRatio_2024) %>%
+    pivot_longer(cols = starts_with("稼働率"),
+                 names_to = "cat",
+                 values_to = "val") %>%
+    separate(col = "cat",
+             into = c("category", "colnames"),
+             sep = "\\.") %>%
+    pivot_wider(names_from = "colnames",
+                values_from = "val") %>%
+    dplyr::filter(!is.na(Month))
+
+HotelTotalData <- bind_rows(HotelCountData, OperatingRatio)
 ```
 
 ## 表    
+- 施設数
 ```{r}
+DT::datatable(HotelCountData, rownames = FALSE, 
+              filter = 'top',
+              extensions = 'Buttons', options = list(
+                  dom = 'Bfrtip',
+                  buttons = list(list(extend = 'colvis', columns = c(3:24)))
+                  )
+              )
+              
 ```
 
-## 可視化
+- 稼働率
 ```{r}
+DT::datatable(OperatingRatio, rownames = FALSE, 
+              filter = 'top',
+              extensions = 'Buttons', options = list(
+                  dom = 'Bfrtip',
+                  buttons = list(list(extend = 'colvis', columns = c(3:24)))
+                  )
+              )
+              
 ```
+
+
+## 可視化
+- 施設数の変動    
+```{r}
+HotelCountData <- HotelCountData %>%
+    mutate(YMD = as.Date(paste(Year, Month, "01", sep = "-")))
+HotelCount_plot <- HotelCountData %>%
+    ggplot(aes(x = YMD, y = 全体_総数, colour = CD所在地)) +
+    geom_line() +
+    geom_point()
+
+ggplotly(HotelCount_plot)
+```
+
+- 稼働率の変動   
+```{r}
+OperatingRatio <- OperatingRatio %>%
+    mutate(YMD = as.Date(paste(Year, Month, "01", sep = "-")))
+OperatingRatio_plot <- OperatingRatio %>%
+    ggplot(aes(x = YMD, y = 全体_総数, colour = CD所在地)) +
+    geom_line() +
+    geom_point()
+
+ggplotly(OperatingRatio_plot)
+
+```
+
 
 
