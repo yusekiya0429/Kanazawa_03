@@ -150,6 +150,11 @@ OperatingRatio <- bind_rows(OperatingRatio_2023, OperatingRatio_2024) %>%
     dplyr::filter(!is.na(Month))
 
 HotelTotalData <- bind_rows(HotelCountData, OperatingRatio)
+
+HotelTotalData_long <- HotelTotalData %>%
+  pivot_longer(cols = 5:25,
+               names_to = "Class",
+               values_to = "val")
 ```
 
 ## 表    
@@ -205,4 +210,29 @@ ggplotly(OperatingRatio_plot)
 ```
 
 
+- 宿泊施設タイプ別変動     
+  - 石川県
+```{r}
+pref <- "石川県"
+prefClass_data <- HotelTotalData_long %>%
+  mutate(YMD = as.Date(paste(Year, Month, "01", sep = "-"))) %>%
+  filter(stri_detect_regex(.$CD所在地, pref)) %>%
+  filter(!stri_detect_regex(.$Class, "_")) %>%
+  pivot_wider(names_from = category, values_from = val) 
+```
 
+```{r}
+prefClass_HotelCount_plot <- prefClass_data %>%
+  ggplot(aes(x = YMD, y = 施設数)) +
+  geom_bar(aes(fill = Class, color = Class),
+           stat = "identity")
+ggplotly(prefClass_HotelCount_plot)
+```
+
+```{R}
+prefClass_OperatingRatio_plot <- prefClass_data %>%  
+  ggplot(aes(x = YMD, y = 稼働率, fill = Class, color = Class)) +
+  geom_line() +
+  geom_point()
+ggplotly(prefClass_OperatingRatio_plot)
+```
